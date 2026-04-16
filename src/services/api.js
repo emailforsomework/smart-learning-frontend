@@ -7,15 +7,12 @@ const api = axios.create({
   withCredentials: true, // send httpOnly refresh cookie with every request
 })
 
-// ─── Inject access token from context ────────────────────────────────────────
-// We store a setter here so the Axios interceptor can read the latest token
-// without depending on React state directly.
-let _getToken = () => null
-export const setTokenGetter = (fn) => { _getToken = fn }
+// ─── Token management ────────────────────────────────────────────────────────
+let _accessToken = null
+export const setAxiosToken = (token) => { _accessToken = token }
 
 api.interceptors.request.use((config) => {
-  const token = _getToken()
-  if (token) config.headers.Authorization = `Bearer ${token}`
+  if (_accessToken) config.headers.Authorization = `Bearer ${_accessToken}`
   return config
 })
 
