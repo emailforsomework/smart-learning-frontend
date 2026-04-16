@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
-import { setTokenGetter } from './services/api'
 import Navbar from './components/Navbar'
 import AuthPage from './pages/AuthPage'
 import DashboardPage from './pages/DashboardPage'
@@ -12,10 +11,6 @@ import PomodoroPage from './pages/PomodoroPage'
 function AppInner() {
   const { accessToken, setAccessToken, logout, loading } = useAuth()
 
-  // Keep Axios interceptor in sync with latest token
-  useEffect(() => {
-    setTokenGetter(() => accessToken)
-  }, [accessToken])
 
   // Listen for token refresh events from the Axios interceptor
   useEffect(() => {
