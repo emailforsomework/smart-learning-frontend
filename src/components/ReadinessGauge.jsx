@@ -11,7 +11,7 @@ export default function ReadinessGauge({ score = 0 }) {
 
   return (
     <div style={{ position:'relative', width:200, height:160 }}>
-      <svg width="200" height="170" viewBox="0 0 200 170" style={{ transform:'rotate(-135deg)' }}>
+      <svg width="200" height="170" viewBox="0 15 200 170" style={{ transform:'rotate(-135deg)' }}>
         {/* Track */}
         <circle cx="100" cy="100" r={radius} fill="none"
           stroke="var(--bg-elevated)" strokeWidth={stroke}
