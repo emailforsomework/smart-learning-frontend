@@ -12,7 +12,30 @@ export default function TopicCard({ topic, planId, phase }) {
 
   const mut = useMutation({
     mutationFn: (data) => updateTopic(planId, topic.topicId, data).then((r) => r.data),
-    onSuccess: () => { qc.invalidateQueries(['activePlan']); },
+    onMutate: async (newData) => {
+      await qc.cancelQueries(['activePlan'])
+      const previousPlan = qc.getQueryData(['activePlan'])
+      
+      qc.setQueryData(['activePlan'], (old) => {
+        if (!old) return old
+        // Deep clone and update the specific topic
+        const updatedSchedule = old.plan.schedule.map(day => ({
+          ...day,
+          topics: day.topics.map(t => 
+            t.topicId === topic.topicId ? { ...t, ...newData } : t
+          )
+        }))
+        return { ...old, plan: { ...old.plan, schedule: updatedSchedule } }
+      })
+
+      return { previousPlan }
+    },
+    onError: (err, newData, context) => {
+      qc.setQueryData(['activePlan'], context.previousPlan)
+    },
+    onSettled: () => {
+      qc.invalidateQueries(['activePlan'])
+    },
   })
 
   const markStatus = (status) => {
