@@ -26,9 +26,14 @@ export default function PomodoroPage() {
   useEffect(() => {
     if (activeData?.session) {
       const s = activeData.session
-      setTimeLeft(s.remaining || 0)
       setSessionId(s._id)
-      setRunning(s.isRunning)
+      
+      // Reconcile server state with local storage (fixes refresh race condition)
+      const localRunning = localStorage.getItem('pomodoro_running')
+      const isRunning = localRunning !== null ? localRunning === 'true' : s.isRunning
+      
+      setTimeLeft(s.remaining || 0)
+      setRunning(isRunning)
     }
   }, [activeData])
 
@@ -65,10 +70,12 @@ export default function PomodoroPage() {
   const handleStart = () => {
     if (!sessionId) {
       setTimeLeft(MODES[mode].duration * 60)
+      localStorage.setItem('pomodoro_running', 'true')
       startMut.mutate()
     } else {
       const nextState = !running
-      setRunning(nextState) // Optimistic update
+      setRunning(nextState)
+      localStorage.setItem('pomodoro_running', String(nextState))
       toggleMut.mutate(nextState)
     }
   }
@@ -84,6 +91,7 @@ export default function PomodoroPage() {
 
   const reset = () => {
     setRunning(false)
+    localStorage.setItem('pomodoro_running', 'false')
     setTimeLeft(MODES[mode].duration * 60)
     if (sessionId) togglePomodoro(sessionId, { isRunning: false, remainingSeconds: MODES[mode].duration * 60 })
     setSessionId(null)
@@ -137,12 +145,18 @@ export default function PomodoroPage() {
 
         {/* Controls */}
         <div style={{ display:'flex', gap:'0.75rem', justifyContent:'center', marginBottom:'2rem' }}>
-          <button className="btn btn-primary btn-lg" onClick={handleStart} disabled={startMut.isPending}
-            style={{ minWidth:140, background: running ? 'linear-gradient(135deg,#ff6b6b,#ff9999)' : '' }}>
+          <button className="btn btn-primary btn-lg" onClick={handleStart} disabled={startMut.isPending || !planData?.plan}
+            style={{ minWidth:140, background: (running && planData?.plan) ? 'linear-gradient(135deg,#ff6b6b,#ff9999)' : (!planData?.plan ? 'var(--text-muted)' : '') }}>
             {running ? '⏸ Pause' : sessionId ? '▶ Resume' : '▶ Start'}
           </button>
-          <button className="btn btn-secondary" onClick={reset}>↩ Reset</button>
+          <button className="btn btn-secondary" onClick={reset} disabled={!planData?.plan}>↩ Reset</button>
         </div>
+
+        {!planData?.plan && (
+          <div className="alert alert-warning" style={{ textAlign:'center', marginBottom:'2rem' }}>
+            📅 Please <a href="/generate" style={{ fontWeight:700 }}>create a study plan</a> first to enable the timer.
+          </div>
+        )}
 
         {/* Topic selector */}
         {planData?.plan && (
