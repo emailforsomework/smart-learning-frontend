@@ -28,7 +28,7 @@ export default function PomodoroPage() {
       const s = activeData.session
       setTimeLeft(s.remaining || 0)
       setSessionId(s._id)
-      if (s.remaining > 0) setRunning(true)
+      setRunning(s.isRunning)
     }
   }, [activeData])
 
@@ -58,9 +58,19 @@ export default function PomodoroPage() {
     onSuccess: (d) => { setSessionId(d.session._id); setRunning(true) },
   })
 
+  const toggleMut = useMutation({
+    mutationFn: (isRunning) => togglePomodoro(sessionId, { isRunning, remainingSeconds: timeLeft })
+  })
+
   const handleStart = () => {
-    if (!running) { setTimeLeft(MODES[mode].duration * 60); startMut.mutate() }
-    else setRunning(false)
+    if (!sessionId) {
+      setTimeLeft(MODES[mode].duration * 60)
+      startMut.mutate()
+    } else {
+      const nextState = !running
+      setRunning(nextState) // Optimistic update
+      toggleMut.mutate(nextState)
+    }
   }
 
   const handleComplete = async () => {
@@ -72,7 +82,12 @@ export default function PomodoroPage() {
     }
   }
 
-  const reset = () => { setRunning(false); setTimeLeft(MODES[mode].duration * 60); setSessionId(null) }
+  const reset = () => {
+    setRunning(false)
+    setTimeLeft(MODES[mode].duration * 60)
+    if (sessionId) togglePomodoro(sessionId, { isRunning: false, remainingSeconds: MODES[mode].duration * 60 })
+    setSessionId(null)
+  }
 
   const changeMode = (i) => { setMode(i); setRunning(false); setTimeLeft(MODES[i].duration * 60) }
 
