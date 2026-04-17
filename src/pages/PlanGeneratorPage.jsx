@@ -17,7 +17,7 @@ export default function PlanGeneratorPage() {
   const [form, setForm] = useState({
     title: '',
     examDate: '',
-    dailyStudyHours: 4,
+    dailyStudyHours: '',
     targetScore: '',
     subjects: [emptySubject()],
   })
@@ -42,7 +42,14 @@ export default function PlanGeneratorPage() {
       return res.data
     },
     onSuccess: () => { qc.invalidateQueries(['activePlan']); navigate('/') },
-    onError: (err) => setError(err.response?.data?.message || 'Failed to generate plan'),
+    onError: (err) => {
+      const data = err.response?.data;
+      if (data?.errors && Array.isArray(data.errors)) {
+        setError(data.errors.map(e => e.message).join(', '));
+      } else {
+        setError(data?.message || 'Failed to generate plan');
+      }
+    },
   })
 
   const setField = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
@@ -96,7 +103,7 @@ export default function PlanGeneratorPage() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Daily Study Hours</label>
-                  <input className="form-input" type="number" min="1" max="16" value={form.dailyStudyHours} onChange={setField('dailyStudyHours')} />
+                  <input className="form-input" type="number" min="1" max="16" placeholder="e.g. 5" value={form.dailyStudyHours} onChange={setField('dailyStudyHours')} required />
                 </div>
               </div>
               <div className="form-group">
@@ -104,7 +111,19 @@ export default function PlanGeneratorPage() {
                 <input className="form-input" type="number" placeholder="e.g. 85" value={form.targetScore} onChange={setField('targetScore')} />
               </div>
               <button className="btn btn-primary btn-full" style={{ marginTop:'0.5rem' }}
-                onClick={() => { if (!form.title || !form.examDate) return setError('Title and exam date are required'); setError(''); setStep(2) }}>
+                onClick={() => {
+                  setError('');
+                  if (!form.title || !form.examDate || !form.dailyStudyHours) {
+                    return setError('All fields are required');
+                  }
+                  if (new Date(form.examDate) < new Date().setHours(0,0,0,0)) {
+                    return setError('Exam date must be in the future');
+                  }
+                  if (Number(form.dailyStudyHours) < 1 || Number(form.dailyStudyHours) > 16) {
+                    return setError('Daily study hours must be between 1 and 16');
+                  }
+                  setStep(2);
+                }}>
                 Next: Add Subjects →
               </button>
             </>
